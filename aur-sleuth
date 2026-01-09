@@ -731,13 +731,8 @@ class LLM:
         optional_llm_params = ["temperature", "top_p", "reasoning_effort"]
         for param in optional_llm_params:
             value = getattr(self, param, None)
-            if value is None or (
-                param == "reasoning_effort"
-                and isinstance(value, str)
-                and value == ""
-            ):
-                continue
-            kwargs[param] = value
+            if value is not None:
+                kwargs[param] = value
 
         response = self.llm_client.chat_completions_create(**kwargs)
 
@@ -777,15 +772,15 @@ def get_llm_params_from_env():
         top_p = float(top_p)
 
     raw_reasoning_effort = os.environ.get("LLM_REASONING_EFFORT")
-    if raw_reasoning_effort is None:
-        raw_reasoning_effort = DEFAULT_REASONING_EFFORT
-    reasoning_effort = raw_reasoning_effort.strip().lower()
-    if reasoning_effort not in VALID_REASONING_EFFORTS:
-        if reasoning_effort:
+    normalized_reasoning_effort = (
+        raw_reasoning_effort or DEFAULT_REASONING_EFFORT
+    ).strip().lower()
+    if normalized_reasoning_effort not in VALID_REASONING_EFFORTS:
+        if raw_reasoning_effort:
             logger.warning(
                 "Invalid LLM_REASONING_EFFORT '%s' (normalized: '%s'); falling back to %s",
                 raw_reasoning_effort,
-                reasoning_effort,
+                normalized_reasoning_effort,
                 DEFAULT_REASONING_EFFORT,
             )
         else:
@@ -793,7 +788,8 @@ def get_llm_params_from_env():
                 "LLM_REASONING_EFFORT empty; using default %s",
                 DEFAULT_REASONING_EFFORT,
             )
-        reasoning_effort = DEFAULT_REASONING_EFFORT
+        normalized_reasoning_effort = DEFAULT_REASONING_EFFORT
+    reasoning_effort = normalized_reasoning_effort
 
     return LLMParams(
         model=model,
