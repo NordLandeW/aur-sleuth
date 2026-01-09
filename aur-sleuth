@@ -731,7 +731,11 @@ class LLM:
         optional_llm_params = ["temperature", "top_p", "reasoning_effort"]
         for param in optional_llm_params:
             value = getattr(self, param, None)
-            if isinstance(value, str) and value == "":
+            if (
+                param == "reasoning_effort"
+                and isinstance(value, str)
+                and value == ""
+            ):
                 continue
             if value is not None:
                 kwargs[param] = value
@@ -782,6 +786,11 @@ def get_llm_params_from_env():
             logger.warning(
                 "Invalid LLM_REASONING_EFFORT '%s'; falling back to %s",
                 raw_reasoning_effort,
+                DEFAULT_REASONING_EFFORT,
+            )
+        else:
+            logger.debug(
+                "LLM_REASONING_EFFORT empty; using default %s",
                 DEFAULT_REASONING_EFFORT,
             )
         reasoning_effort = DEFAULT_REASONING_EFFORT
