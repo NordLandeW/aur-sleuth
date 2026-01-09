@@ -92,6 +92,7 @@ ALLOWED_LLM_RESPONSE_TAGS = (
     "summary",
 )
 ALLOWED_LLM_RESPONSE_TAGS_SET = set(ALLOWED_LLM_RESPONSE_TAGS)
+UNEXPECTED_TAG_PATTERN = re.compile(r"<(/?)([A-Za-z0-9:_-]+)([^>]*)>")
 
 
 def sanitize_for_llm(text: str) -> str:
@@ -882,17 +883,16 @@ def sanitize_xml_string(xml_string: str) -> str:
     def escape_unexpected_tags(match: re.Match[str]) -> str:
         # Captures optional leading slash (closing tags), tag name (used for allowlisting),
         # and any attributes or trailing slash (self-closing tags).
-        tag_name = match.group(2).lower()
+        tag_name = match.group(2)
+        if not tag_name:
+            return saxutils.escape(match.group(0))
+        tag_name = tag_name.lower()
         if tag_name not in ALLOWED_LLM_RESPONSE_TAGS_SET:
             return saxutils.escape(match.group(0))
         return match.group(0)
 
     # Matches opening, closing, and self-closing tags; only allowlisted tag names are left untouched.
-    sanitized = re.sub(
-        r"<(/?)([A-Za-z0-9:_-]+)([^>]*)>",
-        escape_unexpected_tags,
-        sanitized,
-    )
+    sanitized = UNEXPECTED_TAG_PATTERN.sub(escape_unexpected_tags, sanitized)
     return sanitized
 
 
