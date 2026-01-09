@@ -731,14 +731,13 @@ class LLM:
         optional_llm_params = ["temperature", "top_p", "reasoning_effort"]
         for param in optional_llm_params:
             value = getattr(self, param, None)
-            if (
+            if value is None or (
                 param == "reasoning_effort"
                 and isinstance(value, str)
                 and value == ""
             ):
                 continue
-            if value is not None:
-                kwargs[param] = value
+            kwargs[param] = value
 
         response = self.llm_client.chat_completions_create(**kwargs)
 
@@ -784,8 +783,9 @@ def get_llm_params_from_env():
     if reasoning_effort not in VALID_REASONING_EFFORTS:
         if reasoning_effort:
             logger.warning(
-                "Invalid LLM_REASONING_EFFORT '%s'; falling back to %s",
+                "Invalid LLM_REASONING_EFFORT '%s' (normalized: '%s'); falling back to %s",
                 raw_reasoning_effort,
+                reasoning_effort,
                 DEFAULT_REASONING_EFFORT,
             )
         else:
