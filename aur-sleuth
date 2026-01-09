@@ -85,7 +85,13 @@ IGNORED_DIRS = [".git"]
 GREY = "grey50"
 # Use ASCII icons to avoid ambiguous-width Unicode affecting box layout in some terminals
 USE_ASCII_ICONS = os.environ.get("AUR_SLEUTH_ASCII_ICONS", "").lower() in ("1", "true", "yes", "y")
-ALLOWED_LLM_RESPONSE_TAGS = {"security_assessment", "decision", "details", "summary"}
+ALLOWED_LLM_RESPONSE_TAGS = (
+    "security_assessment",
+    "decision",
+    "details",
+    "summary",
+)
+ALLOWED_LLM_RESPONSE_TAGS_SET = set(ALLOWED_LLM_RESPONSE_TAGS)
 
 
 def sanitize_for_llm(text: str) -> str:
@@ -874,16 +880,14 @@ def sanitize_xml_string(xml_string: str) -> str:
     sanitized = re.sub(r"&(?![a-zA-Z]+;|#[0-9]+;)", "&amp;", xml_string)
 
     def escape_unexpected_tags(match: re.Match[str]) -> str:
-        # group1: optional leading slash for closing tags (not used directly)
-        # group2: tag name (used for allowlisting)
-        # group3: attributes / optional trailing slash for self-closing tags (not used directly)
+        # Captures optional leading slash (closing tags), tag name (used for allowlisting),
+        # and any attributes or trailing slash (self-closing tags).
         tag_name = match.group(2).lower()
-        if tag_name not in ALLOWED_LLM_RESPONSE_TAGS:
+        if tag_name not in ALLOWED_LLM_RESPONSE_TAGS_SET:
             return saxutils.escape(match.group(0))
         return match.group(0)
 
-    # Regex captures: optional leading slash, tag name, then any attributes or trailing slash.
-    # Allow opening/closing/self-closing tags only when the tag name is allowlisted.
+    # Matches opening, closing, and self-closing tags; only allowlisted tag names are left untouched.
     sanitized = re.sub(
         r"<(/?)([A-Za-z0-9:_-]+)([^>]*)>",
         escape_unexpected_tags,
@@ -936,9 +940,10 @@ def audit_file(
         top_p=llm_params.top_p,
         reasoning_effort=llm_params.reasoning_effort,
     )
+    allowed_tags = ", ".join(f"<{tag}>" for tag in ALLOWED_LLM_RESPONSE_TAGS)
     prompt = f"""{extra_instructions + "\n" if extra_instructions else ""}
 Respond with a security assessment in the following XML format. Ensure that all special characters (e.g., &, <, >) within the XML tags are properly escaped (e.g., &amp;, &lt;, &gt;).
-Do not include any XML tags other than <security_assessment>, <decision>, <details>, and <summary>. If you must mention other XML-like tags (for example <defaults>), escape them like &lt;defaults&gt; instead of emitting raw tags.
+Do not include any XML tags other than {allowed_tags}. If you must mention other XML-like tags (for example <defaults>), escape them like &lt;defaults&gt; instead of emitting raw tags.
 <security_assessment>
 <decision>SAFE or UNSAFE</decision>
 <details>
