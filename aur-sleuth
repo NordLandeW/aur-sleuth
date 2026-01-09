@@ -1146,13 +1146,12 @@ def decide_next_files_to_review(
         top_p=llm_params.top_p,
         reasoning_effort=llm_params.reasoning_effort,
     )
-    timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())
     prompt = f"""
 To continue the audit of the {sanitize_for_llm(package_name)} package, please select {num_additional_files_to_review} more source files to review from the package directory listing below.
 
-Do not select any files that have already been reviewed.
-
 Audit timestamp for this run: {timestamp}.
+Do not select any files that have already been reviewed.
 Prefer reviewing text files and avoid selecting binary files unless absolutely necessary.
 
 <already_reviewed_files>
